@@ -209,3 +209,17 @@ def get_user_transactions(user_id):
 def get_group_transactions(group_id):
     transactions = session.query(Transaction).filter_by(group_id=group_id).all()
     return transactions
+
+
+def add_group_points(group_id, points_to_add):
+    try:
+        group = session.query(Group).filter_by(group_id=group_id).one()
+        group.points += points_to_add
+        session.commit()
+        print(f"Added {points_to_add} points to group {group_id}. New total: {group.points}")
+        return True
+    except Exception as e:
+        session.rollback()
+        print(f"Failed to add points to group due to {e}.")
+        return False
+

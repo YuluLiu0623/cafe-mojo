@@ -155,3 +155,19 @@ def get_group(group_id):
     members_data = [{"user_id": member_id} for member_id in group_details['members']]
     group_details['members'] = members_data
     return jsonify(group_details), 200
+
+
+@app.route('/group/add_points', methods=['POST'])
+@jwt_required()
+def add_group_points():
+    current_user = get_jwt_identity()
+    data = request.get_json()
+    group_id = data.get('group_id')
+    points_to_add = data.get('points_to_add')
+
+    success = app.config["db_query"].add_group_points(group_id, points_to_add)
+    if success:
+        return jsonify({"msg": "Group points added successfully"}), 200
+    else:
+        return jsonify({"msg": "Failed to add points to group"}), 500
+

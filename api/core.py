@@ -155,3 +155,8 @@ def get_group(group_id):
     members_data = [{"user_id": member_id} for member_id in group_details['members']]
     group_details['members'] = members_data
     return jsonify(group_details), 200
+
+
+@app.route('/healthcheck', methods=['GET'])
+def healthcheck():
+    return jsonify({"status": "ok"}), 200

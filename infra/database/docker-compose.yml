@@ -1,0 +1,127 @@
+version: "3.9"
+
+services:
+  euw_primary:
+    hostname: euw-01
+    image:  bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./eu_w_primary/data:/var/lib/postgresql/data/
+      - ./eu_w_primary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=euw-01
+      - REPMGR_PARTNER_NODES=euw-01,euw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=euw-01
+      - REPMGR_NODE_ID=1
+      - REPMGR_NODE_NETWORK_NAME=euw-01
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == MACHINE01
+      restart_policy:
+        condition: on-failure
+    networks:
+      - global
+      - eu_west
+    ports:
+      - "5430:5432"
+  euw_secondary:
+    hostname: euw-02
+    image: bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./eu_w_secondary/data:/var/lib/postgresql/data/
+      - ./eu_w_secondary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=euw-01
+      - REPMGR_PARTNER_NODES=euw-01,euw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=euw-02
+      - REPMGR_NODE_ID=2
+      - REPMGR_NODE_NETWORK_NAME=euw-02
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == MACHINE02
+      restart_policy:
+        condition: on-failure
+    networks:
+      - eu_west
+      - global
+    ports:
+      - "5431:5432"
+  usw_primary:
+    hostname: usw-01
+    image: bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./us_w_primary/data:/var/lib/postgresql/data/
+      - ./us_w_primary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=usw-01
+      - REPMGR_PARTNER_NODES=usw-01,usw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=usw-01
+      - REPMGR_NODE_ID=1
+      - REPMGR_NODE_NETWORK_NAME=usw-01
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == MACHINE03
+      restart_policy:
+        condition: on-failure
+    networks:
+      - global
+      - us_west
+    ports:
+      - "5440:5432"
+  usw_secondary:
+    hostname: usw-02
+    image: bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./us_w_secondary/data:/var/lib/postgresql/data/
+      - ./us_w_secondary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=usw-01
+      - REPMGR_PARTNER_NODES=usw-01,usw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=usw-02
+      - REPMGR_NODE_ID=2
+      - REPMGR_NODE_NETWORK_NAME=usw-02
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == MACHINE02
+      restart_policy:
+        condition: on-failure
+    networks:
+      - us_west
+      - global
+    ports:
+      - "5441:5432"
+
+networks:
+  global:
+    driver: bridge
+  eu_west:
+    driver: bridge
+  us_west:
+    driver: bridge

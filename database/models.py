@@ -62,6 +62,21 @@ class Item(Base):
     name = Column(String)
     price = Column(Float)
 
+# Define function to add items if they do not exist
+def add_items(session):
+    items = [
+        {'item_id': 1, 'name': 'Coffee Latte', 'price': 3},
+        {'item_id': 2, 'name': 'Coffee Espresso', 'price': 1.5},
+        {'item_id': 3, 'name': 'Cake', 'price': 8},
+        {'item_id': 4, 'name': 'Cookies', 'price': 8},
+        {'item_id': 5, 'name': 'Hot Chocolate', 'price': 3.5}
+    ]
+    for item_data in items:
+        item = session.query(Item).filter_by(item_id=item_data['item_id']).first()
+        if item is None:
+            session.add(Item(**item_data))
+    session.commit()
+
 
 class TransactionItem(Base):
     __tablename__ = 'transaction_item'
@@ -93,3 +108,6 @@ Base.metadata.create_all(engine)
 # Create a sessionmaker, bound to the engine
 Session = sessionmaker(bind=engine)
 session = Session()
+
+# add menu items
+add_items(session)

@@ -1,4 +1,5 @@
-flask
-flask_jwt_extended
-sqlalchemy
-click
+click==8.1.7
+Flask==3.0.3
+Flask_JWT_Extended==4.6.0
+Requests==2.31.0
+SQLAlchemy==2.0.29

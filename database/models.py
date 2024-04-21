@@ -1,7 +1,7 @@
 from time import sleep
 import utils
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Table, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Table, DateTime, text, pool
 from sqlalchemy.orm import relationship, declarative_base, sessionmaker
 from datetime import datetime
 
@@ -100,32 +100,84 @@ class TransactionItem(Base):
         }
 
 
-# Create the engine to connect to the SQL database
-# add a dampening retry mechanism
-engine = None
-for _ in range(5):
-    try:
-        engine = create_engine(utils.DB_URL, echo=False)
-        connection = engine.connect()
-        connection.close()
-        print("Database connection successful!")
-        break
-    except Exception as e:
-        print("ERROR: Database connection failed!")
-        print(e)
-        print("retrying in 5 seconds.")
-        sleep(5)
-        engine = None
-if not engine:
-    print("Unable to establish database connection after 5 attemps, exiting...")
-    exit(1)
+class DatabaseConnection:
+    def __init__(self, urls):
+        self._primary_url = None
+        self._urls = urls
+        self.engine = None
+        self._retries = 5
+        self._retry_wait = 5
+        self._connect_to_primary()
 
-# Create all tables in the engine
-Base.metadata.create_all(engine)
+    def _connect_to_primary(self):
+        # check if primary still the same or has changed
+        if self._primary_url is not None:
+            is_primary_same = not self._is_database_in_recovery_or_down(self._primary_url)
+        else:
+            is_primary_same = False
 
-# Create a sessionmaker, bound to the engine
-Session = sessionmaker(bind=engine)
-session = Session()
+        # if not same, connect to db which is primary
+        if not is_primary_same:
+            number_of_tries = 0
+            while number_of_tries <= self._retries:
+                number_of_tries += 1
+                for each_url in self._urls:
+                    is_in_recovery_or_down = self._is_database_in_recovery_or_down(each_url)
+                    if not is_in_recovery_or_down:
+                        self._primary_url = each_url
+                        self._is_current_connection_read_only = False
+                        return
+                sleep(self._retry_wait)
+            raise Exception(f"Connecting to primary failed after {number_of_tries} retries!")
+
+    def _is_database_in_recovery_or_down(self, url):
+        self.engine = create_engine(url, poolclass=pool.QueuePool, pool_size=5, pool_recycle=3600)
+        try:
+            session = sessionmaker(bind=self.engine)()
+            res = session.query(text('pg_is_in_recovery()')).all()
+            is_in_recovery = res[0][0]
+            session.close()
+            self._is_current_connection_read_only = True
+            return is_in_recovery
+        except Exception as e:
+            print(f"Failed to connect to database: {e}")
+            return True
+
+    def _connect_to_any(self):
+        number_of_tries = 1
+
+        while number_of_tries <= self._retries:
+            number_of_tries += 1
+            for each_url in self._urls:
+                self.engine = create_engine(each_url, poolclass=pool.QueuePool, pool_size=5, pool_recycle=3600)
+                try:
+                    conn = self.engine.connect()
+                    conn.close()
+                    return
+                except Exception as e:
+                    print(f"Failed to connect to database: {e}")
+        raise Exception(f"Connecting to any database failed after {number_of_tries} retries")
+
+    # def _is_connected(self):
+    #     return self.engine and self.engine.connect()
+
+    def get_session(self, read_only=False):
+        # if not self._is_connected():
+        if read_only:
+            self._connect_to_any()
+        else:
+            self._connect_to_primary()
+        # elif self._is_current_connection_read_only and not read_only:
+        #     self._connect_to_primary()
+        return sessionmaker(bind=self.engine)()
+
+
+home_db_connection = DatabaseConnection(utils.HOME_DB_CLUSTER_URLS)
+peer_db_connection = DatabaseConnection(utils.PEER_DB_CLUSTER_URLS)
+
+Base.metadata.create_all(home_db_connection.engine)
+home_db_session = home_db_connection.get_session()
+peer_db_session = peer_db_connection.get_session()
 
 # add menu items
-add_items(session)
+add_items(home_db_session)

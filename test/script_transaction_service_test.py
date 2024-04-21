@@ -5,7 +5,7 @@ How to run this script:
 1. Ensure the API server that you are testing is running and accessible. The BASE_URL in the script should be set to the API's base URL.
 2. Place this script in the appropriate directory. It is recommended to store it under 'cafe-moji/test' to maintain project organization.
 3. Execute the script from your command line by navigating to the directory where the script is stored and running:
-   python script_transaction_service_test.py
+   python script_transaction_service_test.py <API_URL>
 
 
 Requirements:

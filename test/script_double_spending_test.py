@@ -24,11 +24,43 @@ Purpose:
 - This script is used primarily for testing and verifying the correct functionality of user registration, group creation, transaction handling, and concurrency management within the API. It aims to ensure that the system performs as expected under simulated real-world conditions.
 """
 
-
 import threading
+import psycopg2
 import requests
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-API_BASE_URL = "http://localhost:5000"  # 根据实际情况调整
+API_BASE_URL = "http://localhost:5000"
+DB_CONFIG = {
+    'dbname': 'cafe_mojo',
+    'user': 'user',
+    'password': 'password',
+    'host': 'localhost',
+    'port': 5432,
+}
+
+
+def get_db_connection():
+    conn = psycopg2.connect(**DB_CONFIG)
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    return conn
+
+
+def clean_up_database(test_usernames):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # 删除测试交易记录
+            cursor.execute(
+                "DELETE FROM transaction_item WHERE transaction_id IN (SELECT id FROM transaction WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s)));",
+                (test_usernames,))
+            cursor.execute("DELETE FROM transaction WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s));",
+                           (test_usernames,))
+            # 删除测试用户与组的关联
+            cursor.execute("DELETE FROM group_member WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s));",
+                           (test_usernames,))
+            # 如果组是特定于测试，你也可以删除组
+            cursor.execute("DELETE FROM group WHERE name = %s;", ('TestGroup',))
+            # 删除测试用户
+            cursor.execute("DELETE FROM user WHERE username = ANY(%s);", (test_usernames,))
 
 
 def register_user(username, password):
@@ -132,6 +164,9 @@ def main():
     simulate_transaction(jwt1, jwt2, group_id)
     result, status = check_group_points(jwt1, group_id)
     print(f"Group Points Status: {status}, Data: {result}")
+
+    test_usernames = [user1['username'], user2['username']]
+    clean_up_database(test_usernames)
 
 
 if __name__ == '__main__':

@@ -11,6 +11,38 @@ import sys
 import requests
 import threading
 
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from sqlalchemy.dialects.postgresql import psycopg2
+
+# Database configuration
+DB_CONFIG = {
+    'dbname': 'cafe_mojo',
+    'user': 'user',
+    'password': 'password',
+    'host': 'localhost',  # 如果脚本在同一网络环境下运行，使用Docker服务的hostname或容器名称
+    'port': '5432',
+}
+
+
+def get_db_connection():
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        return conn
+    except psycopg2.DatabaseError as e:
+        print(f"Database connection failed: {e}")
+        sys.exit(1)
+
+
+def clean_up_database():
+    conn = get_db_connection()
+    with conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM groups WHERE name = %s", ('TestConflict',))
+            cursor.execute("DELETE FROM users WHERE username LIKE %s", ('test_conflict_user%',))
+            conn.commit()
+    print("Test data has been cleaned up.")
+
 
 def main():
     if len(sys.argv) < 3:
@@ -90,6 +122,7 @@ def main():
             add_member_to_group(user1_token, API_BASE_URL_REGION1, group_id, "test_conflict_user2")
             simulate_concurrent_updates(group_id, user1_token, user2_token, API_BASE_URL_REGION1, API_BASE_URL_REGION2)
 
+    clean_up_database()
 
 if __name__ == "__main__":
     main()

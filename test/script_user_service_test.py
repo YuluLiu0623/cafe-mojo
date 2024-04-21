@@ -24,9 +24,42 @@ Purpose:
 
 
 import sys
+
+import psycopg2
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from uuid import uuid4
+
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+# Database configuration
+DB_CONFIG = {
+    'dbname': 'cafe_mojo',
+    'user': 'user',
+    'password': 'password',
+    'host': 'localhost',
+    'port': '5432',
+}
+
+
+def get_db_connection():
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        return conn
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        sys.exit(1)
+
+
+def clean_up_database(usernames):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "DELETE FROM users WHERE username = ANY(%s);"
+            cursor.execute(query, (usernames,))
+            conn.commit()
+    print("Cleaned up test users from database.")
+
 
 def main():
     if len(sys.argv) < 2:
@@ -49,10 +82,13 @@ def main():
 
     success_count = sum(1 for success, _ in results if success)
     failed_count = USERS_TO_REGISTER - success_count
+    registered_usernames = [username for success, username in results if success]
 
     print(f"Attempted to register users: {USERS_TO_REGISTER}")
     print(f"Successfully registered users: {success_count}")
     print(f"Failed registration attempts: {failed_count}")
+
+    clean_up_database(registered_usernames)
 
 if __name__ == "__main__":
     main()

@@ -25,11 +25,12 @@ Location and Structure:
 Purpose:
 - The primary purpose of this script is to evaluate how well the transaction processing system performs under significant load and to identify any potential bottlenecks or failures in the system's ability to process transactions concurrently.
 """
-
-
+import psycopg2
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 # Configuration
 BASE_URL = "http://localhost:5000"  # Base URL for the API server
@@ -39,6 +40,29 @@ PASSWORD = "testpassword"  # Password for test user
 # Test parameters
 CONCURRENT_REQUESTS = 100  # Number of concurrent requests
 TEST_DURATION = 60  # Duration of the test in seconds, modify as needed
+
+DB_CONFIG = {
+    'dbname': 'cafe_mojo',
+    'user': 'user',
+    'password': 'password',
+    'host': 'localhost',  # 当运行在Docker容器外部时，使用Docker容器的IP或localhost如果端口已映射
+    'port': '5432',
+}
+
+
+def get_db_connection():
+    conn = psycopg2.connect(**DB_CONFIG)
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    return conn
+
+
+def clean_up_database():
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM transactions WHERE user_id = (SELECT id FROM users WHERE username = %s);", (USERNAME,))
+            cursor.execute("DELETE FROM users WHERE username = %s;", (USERNAME,))
+            conn.commit()
+        print("Test data cleaned up.")
 
 
 def setup_test_user():
@@ -130,6 +154,7 @@ def main():
         print(f"Successful requests: {success_count}")
         print(f"Success rate: {success_count / len(futures) * 100:.2f}%")
 
+        clean_up_database()
 
 if __name__ == "__main__":
     main()

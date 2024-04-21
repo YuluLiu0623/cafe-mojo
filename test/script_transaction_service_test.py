@@ -41,9 +41,9 @@ PASSWORD = "testpassword"  # Password for test user
 
 DB_CONFIG = {
     'dbname': 'cafe_mojo',
-    'user': 'user',
+    'user': 'postgres',
     'password': 'password',
-    'host': 'localhost',  # 当运行在Docker容器外部时，使用Docker容器的IP或localhost如果端口已映射
+    'host': 'localhost',
     'port': '5432',
 }
 
@@ -55,11 +55,10 @@ def get_db_connection():
 def clean_up_database():
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM transaction WHERE user_id = (SELECT user_id FROM user WHERE user_name = %s);", (USERNAME,))
-            cursor.execute("DELETE FROM user WHERE user_name = %s;", (USERNAME,))
+            cursor.execute('DELETE FROM "transaction" WHERE user_id = (SELECT user_id FROM "user" WHERE user_name = %s);', (USERNAME,))
+            cursor.execute('DELETE FROM "user" WHERE user_name = %s;', (USERNAME,))
             conn.commit()
-        print("Test data cleaned up.")
-
+    print("Test data cleaned up.")
 
 def setup_test_user(api_base_url):
     """

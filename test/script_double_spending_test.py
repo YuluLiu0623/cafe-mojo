@@ -40,14 +40,14 @@ def clean_up_database(test_usernames, db_config):
     with get_db_connection(db_config) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                "DELETE FROM transaction_item WHERE transaction_id IN (SELECT transaction_id FROM transaction WHERE user_id IN (SELECT user_id FROM user WHERE user_name = ANY(%s)));",
+                'DELETE FROM "transaction_item" WHERE transaction_id IN (SELECT transaction_id FROM "transaction" WHERE user_id IN (SELECT user_id FROM "user" WHERE user_name = ANY(%s)));',
                 (test_usernames,))
-            cursor.execute("DELETE FROM transaction WHERE user_id IN (SELECT user_id FROM user WHERE user_name = ANY(%s));",
+            cursor.execute('DELETE FROM "transaction" WHERE user_id IN (SELECT user_id FROM "user" WHERE user_name = ANY(%s));',
                            (test_usernames,))
-            cursor.execute("DELETE FROM group_member WHERE user_id IN (SELECT user_id FROM user WHERE user_name = ANY(%s));",
+            cursor.execute('DELETE FROM "group_member" WHERE user_id IN (SELECT user_id FROM "user" WHERE user_name = ANY(%s));',
                            (test_usernames,))
-            cursor.execute("DELETE FROM group WHERE name = %s;", ('TestGroup',))
-            cursor.execute("DELETE FROM user WHERE user_name = ANY(%s);", (test_usernames,))
+            cursor.execute('DELETE FROM "group" WHERE name = %s;', ('TestGroup',))
+            cursor.execute('DELETE FROM "user" WHERE user_name = ANY(%s);', (test_usernames,))
         print("Cleaned up the database.")
 
 
@@ -129,7 +129,7 @@ def check_group_points(jwt, group_id, api_base_url):
 def main(api_base_url):
     DB_CONFIG = {
         'dbname': 'cafe_mojo',
-        'user': 'user',
+        'user': 'postgres',
         'password': 'password',
         'host': 'localhost',
         'port': '5432',

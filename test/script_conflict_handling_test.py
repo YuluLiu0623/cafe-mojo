@@ -1,6 +1,14 @@
 """
-This script is designed to simulate concurrent updates to a group's points across different regions in a Dockerized environment.
-To run this script, make sure that each API URL points to a different instance of the application deployed in Docker.
+This script is designed to simulate concurrent updates to a group's score across different regions in a Dockerized distributed database environment. It targets two primary instances of a PostgreSQL database, one in Europe (euw_primary) and one in the USA (usw_primary), which simulate the regional primary databases in a multi-master database setup.
+
+This test will:
+- Register and log in two users, each in a different region.
+- Create a group in one region and add the user from the other region to this group.
+- Perform concurrent updates to the group's score from both regions.
+- Retrieve the final score of the group from one region.
+
+To clean up the test data, the script connects to both regional databases and deletes the test users and the group.
+
 Usage:
 python script_conflict_handling_test.py <API_URL_REGION_1> <API_URL_REGION_2>
 Where API_URL_REGION_1 and API_URL_REGION_2 are the endpoints for the different regional instances.
@@ -10,23 +18,35 @@ Where API_URL_REGION_1 and API_URL_REGION_2 are the endpoints for the different 
 import sys
 import requests
 import threading
-
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from sqlalchemy.dialects.postgresql import psycopg2
+import psycopg2
 
-# Database configuration
-DB_CONFIG = {
+# Define a global variable for the group name to be used in the test
+GROUP_NAME = "GlobalGroup"
+
+# Database configuration for the EU region
+DB_CONFIG_EU = {
     'dbname': 'cafe_mojo',
-    'user': 'user',
+    'user': 'postgres',
     'password': 'password',
-    'host': 'localhost',
+    'host': 'euw_primary',  # Should match the Docker service name
+    'port': '5432',
+}
+
+# Database configuration for the US region
+DB_CONFIG_US = {
+    'dbname': 'cafe_mojo',
+    'user': 'postgres',
+    'password': 'password',
+    'host': 'usw_primary',  # Should match the Docker service name
     'port': '5432',
 }
 
 
-def get_db_connection():
+def get_db_connection(db_config):
+    """Establishes a database connection using the provided configuration."""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(**db_config)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         return conn
     except psycopg2.DatabaseError as e:
@@ -34,12 +54,13 @@ def get_db_connection():
         sys.exit(1)
 
 
-def clean_up_database():
-    conn = get_db_connection()
+def clean_up_database(db_config, group_name):
+    """Cleans up test data from the database for the specified region."""
+    conn = get_db_connection(db_config)
     with conn:
         with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM group WHERE name = %s", ('TestConflict',))
-            cursor.execute("DELETE FROM user WHERE user_name LIKE %s", ('test_conflict_user%',))
+            cursor.execute('DELETE FROM "group" WHERE name = %s', (group_name,))
+            cursor.execute('DELETE FROM "user" WHERE user_name LIKE %s', ('test_conflict_user%',))
             conn.commit()
     print("Test data has been cleaned up.")
 
@@ -49,6 +70,7 @@ def main():
         print("Usage: python script_conflict_handling_test.py <API_URL_REGION_1> <API_URL_REGION_2>")
         sys.exit(1)
 
+    # Obtain the API URLs from the command-line arguments
     API_BASE_URL_REGION1 = sys.argv[1]
     API_BASE_URL_REGION2 = sys.argv[2]
 
@@ -122,7 +144,8 @@ def main():
             add_member_to_group(user1_token, API_BASE_URL_REGION1, group_id, "test_conflict_user2")
             simulate_concurrent_updates(group_id, user1_token, user2_token, API_BASE_URL_REGION1, API_BASE_URL_REGION2)
 
-    clean_up_database()
+    clean_up_database(DB_CONFIG_EU, GROUP_NAME)
+    clean_up_database(DB_CONFIG_US, GROUP_NAME)
 
 if __name__ == "__main__":
     main()

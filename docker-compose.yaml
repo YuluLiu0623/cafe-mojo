@@ -1,0 +1,190 @@
+services:
+  euw_primary:
+    hostname: euw-01
+    image: bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./infra/database/eu_w_primary/data:/var/lib/postgresql/data/
+      - ./infra/database/eu_w_primary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./infra/database/spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - POSTGRESQL_DATABASE=cafe_mojo
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=euw-01
+      - REPMGR_PARTNER_NODES=euw-01,euw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=euw-01
+      - REPMGR_NODE_ID=1
+      - REPMGR_NODE_NETWORK_NAME=euw-01
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == MACHINE01
+      restart_policy:
+        condition: on-failure
+    networks:
+      - global
+      - eu_west
+    ports:
+      - "5430:5432"
+
+  euw_secondary:
+    hostname: euw-02
+    image: bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./infra/database/eu_w_secondary/data:/var/lib/postgresql/data/
+      - ./infra/database/eu_w_secondary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./infra/database/spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - POSTGRESQL_DATABASE=cafe_mojo
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=euw-01
+      - REPMGR_PARTNER_NODES=euw-01,euw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=euw-02
+      - REPMGR_NODE_ID=2
+      - REPMGR_NODE_NETWORK_NAME=euw-02
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == MACHINE02
+      restart_policy:
+        condition: on-failure
+    networks:
+      - eu_west
+      - global
+    ports:
+      - "5431:5432"
+
+  usw_primary:
+    hostname: usw-01
+    image: bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./infra/database/us_w_primary/data:/var/lib/postgresql/data/
+      - ./infra/database/us_w_primary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./infra/database/spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - POSTGRESQL_DATABASE=cafe_mojo
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=usw-01
+      - REPMGR_PARTNER_NODES=usw-01,usw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=usw-01
+      - REPMGR_NODE_ID=1
+      - REPMGR_NODE_NETWORK_NAME=usw-01
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == MACHINE03
+      restart_policy:
+        condition: on-failure
+    networks:
+      - global
+      - us_west
+    ports:
+      - "5440:5432"
+
+  usw_secondary:
+    hostname: usw-02
+    image: bitnami/postgresql-repmgr:14-debian-12
+    volumes:
+      - ./infra/database/us_w_secondary/data:/var/lib/postgresql/data/
+      - ./infra/database/us_w_secondary/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - ./infra/database/spock-3.2.4:/spock
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - POSTGRESQL_DATABASE=cafe_mojo
+      - REPMGR_PASSWORD=otherPassword
+      - REPMGR_PRIMARY_HOST=usw-01
+      - REPMGR_PARTNER_NODES=usw-01,usw-02
+      - BITNAMI_DEBUG=true
+      - REPMGR_NODE_NAME=usw-02
+      - REPMGR_NODE_ID=2
+      - REPMGR_NODE_NETWORK_NAME=usw-02
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == MACHINE02
+      restart_policy:
+        condition: on-failure
+    networks:
+      - us_west
+      - global
+    ports:
+      - "5441:5432"
+
+  euw_api:
+    build:
+      context: .
+      dockerfile: ./infra/api/API.Dockerfile
+    environment:
+      DB_HOST: euw_primary
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_DATABASE: cafe_mojo
+    deploy:
+      replicas: 1
+    networks:
+      - eu_west
+    depends_on:
+      - euw_primary
+      - euw_secondary
+
+  euw_api_lb:
+    build:
+      context: .
+      dockerfile: ./infra/api/Nginx_euw.Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - eu_west
+    depends_on:
+      - euw_api
+
+  usw_api:
+    build:
+      context: .
+      dockerfile: ./infra/api/API.Dockerfile
+    environment:
+      DB_HOST: usw_primary
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_DATABASE: cafe_mojo
+    deploy:
+      replicas: 1
+    networks:
+      - us_west
+    depends_on:
+      - usw_primary
+      - usw_secondary
+
+  usw_api_lb:
+    build:
+      context: .
+      dockerfile: ./infra/api/Nginx_usw.Dockerfile
+    ports:
+      - "8081:8080"
+    networks:
+      - us_west
+    depends_on:
+      - usw_api
+
+networks:
+  eu_west:
+    driver: bridge
+  us_west:
+    driver: bridge
+  global:
+    driver: bridge

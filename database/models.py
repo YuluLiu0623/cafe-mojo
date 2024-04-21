@@ -1,3 +1,4 @@
+from time import sleep
 import utils
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Table, DateTime
@@ -99,8 +100,25 @@ class TransactionItem(Base):
         }
 
 
-# Create the engine to connect to the SQLite database
-engine = create_engine(utils.DB_URL, echo=False)
+# Create the engine to connect to the SQL database
+# add a dampening retry mechanism
+engine = None
+for _ in range(5):
+    try:
+        engine = create_engine(utils.DB_URL, echo=False)
+        connection = engine.connect()
+        connection.close()
+        print("Database connection successful!")
+        break
+    except Exception as e:
+        print("ERROR: Database connection failed!")
+        print(e)
+        print("retrying in 5 seconds.")
+        sleep(5)
+        engine = None
+if not engine:
+    print("Unable to establish database connection after 5 attemps, exiting...")
+    exit(1)
 
 # Create all tables in the engine
 Base.metadata.create_all(engine)

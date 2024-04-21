@@ -171,3 +171,8 @@ def add_group_points():
     else:
         return jsonify({"msg": "Failed to add points to group"}), 500
 
+
+@app.route('/healthcheck', methods=['GET'])
+def healthcheck():
+    return jsonify({"status": "ok"}), 200
+

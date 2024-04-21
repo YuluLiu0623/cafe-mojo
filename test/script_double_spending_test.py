@@ -48,18 +48,14 @@ def get_db_connection():
 def clean_up_database(test_usernames):
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            # 删除测试交易记录
             cursor.execute(
                 "DELETE FROM transaction_item WHERE transaction_id IN (SELECT id FROM transaction WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s)));",
                 (test_usernames,))
             cursor.execute("DELETE FROM transaction WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s));",
                            (test_usernames,))
-            # 删除测试用户与组的关联
             cursor.execute("DELETE FROM group_member WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s));",
                            (test_usernames,))
-            # 如果组是特定于测试，你也可以删除组
             cursor.execute("DELETE FROM group WHERE name = %s;", ('TestGroup',))
-            # 删除测试用户
             cursor.execute("DELETE FROM user WHERE username = ANY(%s);", (test_usernames,))
 
 
@@ -110,7 +106,7 @@ def make_transaction(jwt, group_id, store, item):
 
 
 def add_initial_points(jwt, group_id, initial_points):
-    url = f"{API_BASE_URL}/group/add_points"  # 确保这是正确的API端点
+    url = f"{API_BASE_URL}/group/add_points"
     headers = {'Authorization': f'Bearer {jwt}'}
     data = {"group_id": group_id, "points_to_add": initial_points}
     response = requests.post(url, headers=headers, json=data)

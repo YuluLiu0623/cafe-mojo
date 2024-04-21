@@ -128,15 +128,23 @@ services:
       context: .
       dockerfile: ./infra/api/API.Dockerfile
     environment:
-      DB_HOST: euw_primary
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: password
-      DB_DATABASE: cafe_mojo
+      # HOME DETAILS
+      HOME_DB_HOSTS: euw_primary,euw_secondary
+      HOME_DB_PORTS: 5432,5432
+      HOME_DB_USER: postgres
+      HOME_DB_PASSWORD: password
+      HOME_DB_DATABASE: cafe_mojo
+      # PEER DETAILS
+      PEER_DB_HOSTS: usw_primary,usw_secondary
+      PEER_DB_PORTS: 5432,5432
+      PEER_DB_USER: postgres
+      PEER_DB_PASSWORD: password
+      PEER_DB_DATABASE: cafe_mojo
     deploy:
       replicas: 1
     networks:
       - eu_west
+      - global
     depends_on:
       - euw_primary
       - euw_secondary
@@ -157,15 +165,23 @@ services:
       context: .
       dockerfile: ./infra/api/API.Dockerfile
     environment:
-      DB_HOST: usw_primary
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: password
-      DB_DATABASE: cafe_mojo
+      # HOME DETAILS
+      HOME_DB_HOSTS: usw_primary,usw_secondary
+      HOME_DB_PORTS: 5432,5432
+      HOME_DB_USER: postgres
+      HOME_DB_PASSWORD: password
+      HOME_DB_DATABASE: cafe_mojo
+      # PEER DETAILS
+      PEER_DB_HOSTS: euw_primary,euw_secondary
+      PEER_DB_PORTS: 5432,5432
+      PEER_DB_USER: postgres
+      PEER_DB_PASSWORD: password
+      PEER_DB_DATABASE: cafe_mojo
     deploy:
       replicas: 1
     networks:
       - us_west
+      - global
     depends_on:
       - usw_primary
       - usw_secondary

@@ -3,16 +3,29 @@ import os
 # DB_URL = "sqlite:///./database/sqlite.db"
 # DB_URL = "postgresql://user:password@localhost:5432/cafe_mojo"
 
-def get_db_url():
-    user = os.environ.get("DB_USER")
-    host = os.environ.get("DB_HOST")
-    password = os.environ.get("DB_PASSWORD")
-    port = os.environ.get("DB_PORT")
-    db = os.environ.get("DB_DATABASE")
 
-    if not user or not host or not password or not port or not db:
-        print("ERROR: Environment variables not set properly -> DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_DATABASE")
+def get_db_urls(home=True):
+    region = "HOME" if home else "PEER"
+    user = os.environ.get(f"{region}_DB_USER")
+    if os.environ.get(f"{region}_DB_HOSTS") and "," in os.environ.get(f"{region}_DB_HOSTS"):
+        hosts = os.environ.get(f"{region}_DB_HOSTS").split(",")
+    else:
+        hosts = None
+    password = os.environ.get(f"{region}_DB_PASSWORD")
+    if os.environ.get(f"{region}_DB_PORTS") and "," in os.environ.get(f"{region}_DB_PORTS"):
+        ports = os.environ.get(f"{region}_DB_PORTS").split(",")
+    else:
+        ports = None
+    db = os.environ.get(f"{region}_DB_DATABASE")
+
+    if not user or not hosts or not password or not ports or not db:
+        print(f"ERROR: Environment variables not set properly -> {region}_DB_HOSTS, {region}_DB_PORTS, {region}_DB_USER, {region}_DB_PASSWORD, {region}_DB_DATABASE")
         exit()
-    return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+    db_urls = []
+    for each_index in range(len(hosts)):
+        db_urls.append(f"postgresql://{user}:{password}@{hosts[each_index]}:{ports[each_index]}/{db}")
+    return db_urls
 
-DB_URL = get_db_url()
+
+HOME_DB_CLUSTER_URLS = get_db_urls(True)
+PEER_DB_CLUSTER_URLS = get_db_urls(False)

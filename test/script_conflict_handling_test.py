@@ -19,7 +19,7 @@ DB_CONFIG = {
     'dbname': 'cafe_mojo',
     'user': 'user',
     'password': 'password',
-    'host': 'localhost',  # 如果脚本在同一网络环境下运行，使用Docker服务的hostname或容器名称
+    'host': 'localhost',
     'port': '5432',
 }
 

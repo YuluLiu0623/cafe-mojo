@@ -40,11 +40,11 @@ def clean_up_database(test_usernames, db_config):
     with get_db_connection(db_config) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                "DELETE FROM transaction_item WHERE transaction_id IN (SELECT id FROM transaction WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s)));",
+                "DELETE FROM transaction_item WHERE transaction_id IN (SELECT transaction_id FROM transaction WHERE user_id IN (SELECT user_id FROM user WHERE user_name = ANY(%s)));",
                 (test_usernames,))
-            cursor.execute("DELETE FROM transaction WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s));",
+            cursor.execute("DELETE FROM transaction WHERE user_id IN (SELECT user_id FROM user WHERE user_name = ANY(%s));",
                            (test_usernames,))
-            cursor.execute("DELETE FROM group_member WHERE user_id IN (SELECT id FROM user WHERE username = ANY(%s));",
+            cursor.execute("DELETE FROM group_member WHERE user_id IN (SELECT user_id FROM user WHERE user_name = ANY(%s));",
                            (test_usernames,))
             cursor.execute("DELETE FROM group WHERE name = %s;", ('TestGroup',))
             cursor.execute("DELETE FROM user WHERE user_name = ANY(%s);", (test_usernames,))

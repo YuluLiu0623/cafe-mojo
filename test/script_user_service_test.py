@@ -55,7 +55,7 @@ def get_db_connection():
 def clean_up_database(usernames):
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            query = "DELETE FROM users WHERE username = ANY(%s);"
+            query = "DELETE FROM user WHERE user_name = ANY(%s);"
             cursor.execute(query, (usernames,))
             conn.commit()
     print("Cleaned up test users from database.")

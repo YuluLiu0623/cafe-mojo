@@ -38,8 +38,8 @@ def clean_up_database():
     conn = get_db_connection()
     with conn:
         with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM groups WHERE name = %s", ('TestConflict',))
-            cursor.execute("DELETE FROM users WHERE username LIKE %s", ('test_conflict_user%',))
+            cursor.execute("DELETE FROM group WHERE name = %s", ('TestConflict',))
+            cursor.execute("DELETE FROM user WHERE user_name LIKE %s", ('test_conflict_user%',))
             conn.commit()
     print("Test data has been cleaned up.")
 
